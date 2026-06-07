@@ -3,6 +3,7 @@ import os
 import sys
 import signal
 import time
+import threading
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
@@ -32,8 +33,25 @@ except Exception as e:
     # Don't fail startup, let individual tool calls handle missing credentials
 
 # ---------------- APP INIT ---------------- #
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    logger.info("Google MCP Server lifespan startup")
+    global keep_alive, keep_thread
+    keep_alive = True
+    keep_thread = threading.Thread(target=keep_alive_thread, daemon=True)
+    keep_thread.start()
+    logger.info("Keep-alive thread started in lifespan")
+    yield
+    # Shutdown
+    logger.info("Google MCP Server lifespan shutdown")
+    global keep_alive
+    keep_alive = False
+    logger.info("Keep-alive thread stopped in lifespan")
+
 app = FastAPI(
     title="Google MCP Server",
+    lifespan=lifespan,
     middleware=[
         Middleware(
             CORSMiddleware,
@@ -72,11 +90,26 @@ if not os.environ.get("GOOGLE_TOKEN_JSON"):
 def handle_signal(signum, frame):
     logger.info(f"Received signal {signum}, frame: {frame}")
     logger.info("Signal handler called - app is being terminated")
+    global keep_alive
+    keep_alive = False
     sys.exit(0)
 
 signal.signal(signal.SIGTERM, handle_signal)
 signal.signal(signal.SIGINT, handle_signal)
 logger.info("Signal handlers registered")
+
+# Background keep-alive thread to prevent Railway inactivity detection
+keep_alive = True
+keep_thread = None
+
+def keep_alive_thread():
+    """Background thread to keep container active and prevent Railway from killing it"""
+    global keep_alive
+    logger.info("Keep-alive thread started")
+    while keep_alive:
+        time.sleep(30)  # Log every 30 seconds
+        logger.info("Keep-alive heartbeat - container is active")
+    logger.info("Keep-alive thread stopped")
 
 
 # ---------------- REQUEST SCHEMAS ---------------- #
