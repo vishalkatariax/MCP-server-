@@ -23,6 +23,13 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Google MCP Server is starting up...")
+    
+    # Check if credentials are available at startup
+    if not os.environ.get("GOOGLE_CREDENTIALS_JSON"):
+        logger.warning("GOOGLE_CREDENTIALS_JSON env var not set - server may fail on API calls")
+    if not os.environ.get("GOOGLE_TOKEN_JSON"):
+        logger.warning("GOOGLE_TOKEN_JSON env var not set - server may fail on API calls")
+    
     yield
     logger.info("Google MCP Server is shutting down...")
 

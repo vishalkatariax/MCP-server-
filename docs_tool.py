@@ -38,12 +38,28 @@ def append_to_doc(doc_id: str, content: str):
             }
 
         # -------- AUTH -------- #
-        creds = get_creds()
-        logger.info("Credentials loaded")
+        try:
+            creds = get_creds()
+            logger.info("Credentials loaded")
+        except Exception as e:
+            logger.error(f"Failed to get credentials: {e}")
+            return {
+                "status": "error",
+                "message": "Failed to get credentials",
+                "details": str(e)
+            }
 
         # -------- INIT SERVICE -------- #
-        service = build("docs", "v1", credentials=creds)
-        logger.info("Google Docs service initialized")
+        try:
+            service = build("docs", "v1", credentials=creds)
+            logger.info("Google Docs service initialized")
+        except Exception as e:
+            logger.error(f"Failed to initialize Google Docs service: {e}")
+            return {
+                "status": "error",
+                "message": "Failed to initialize Google Docs service",
+                "details": str(e)
+            }
 
         # -------- FORMAT CONTENT -------- #
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

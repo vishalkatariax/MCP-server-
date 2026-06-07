@@ -71,12 +71,28 @@ def create_email_draft(to: str, subject: str, body: str):
 """
 
         # -------- AUTH -------- #
-        creds = get_creds()
-        logger.info("Credentials loaded")
+        try:
+            creds = get_creds()
+            logger.info("Credentials loaded")
+        except Exception as e:
+            logger.error(f"Failed to get credentials: {e}")
+            return {
+                "status": "error",
+                "message": "Failed to get credentials",
+                "details": str(e)
+            }
 
         # -------- INIT SERVICE -------- #
-        service = build("gmail", "v1", credentials=creds)
-        logger.info("Gmail service initialized")
+        try:
+            service = build("gmail", "v1", credentials=creds)
+            logger.info("Gmail service initialized")
+        except Exception as e:
+            logger.error(f"Failed to initialize Gmail service: {e}")
+            return {
+                "status": "error",
+                "message": "Failed to initialize Gmail service",
+                "details": str(e)
+            }
 
         # -------- CREATE MESSAGE -------- #
         message = create_message(to, subject, formatted_body)
