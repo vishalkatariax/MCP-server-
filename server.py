@@ -1,5 +1,6 @@
 import logging
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -18,8 +19,16 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+# ---------------- LIFESPAN ---------------- #
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Google MCP Server is starting up...")
+    yield
+    logger.info("Google MCP Server is shutting down...")
+
+
 # ---------------- APP INIT ---------------- #
-app = FastAPI(title="Google MCP Server")
+app = FastAPI(title="Google MCP Server", lifespan=lifespan)
 
 
 # ---------------- REQUEST SCHEMAS ---------------- #
