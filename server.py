@@ -1,14 +1,9 @@
 import logging
 import os
 import sys
-import signal
 import time
-import threading
-from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
-from fastapi.middleware import Middleware
-from fastapi.middleware.cors import CORSMiddleware
 
 # ---------------- LOGGING SETUP ---------------- #
 logging.basicConfig(
@@ -32,35 +27,20 @@ except Exception as e:
     logger.error(f"Failed to write credentials.json: {e}")
     # Don't fail startup, let individual tool calls handle missing credentials
 
-# ---------------- APP INIT ---------------- #
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
-    logger.info("Google MCP Server lifespan startup")
-    global keep_alive, keep_thread
-    keep_alive = True
-    keep_thread = threading.Thread(target=keep_alive_thread, daemon=True)
-    keep_thread.start()
-    logger.info("Keep-alive thread started in lifespan")
-    yield
-    # Shutdown
-    logger.info("Google MCP Server lifespan shutdown")
-    keep_alive = False
-    logger.info("Keep-alive thread stopped in lifespan")
+# Check credentials at startup
+logger.info("Google MCP Server is starting up...")
+logger.info(f"Python version: {sys.version}")
+logger.info(f"Working directory: {os.getcwd()}")
+logger.info(f"Environment PORT: {os.environ.get('PORT', 'not set')}")
+logger.info(f"Environment RAILWAY_ENVIRONMENT: {os.environ.get('RAILWAY_ENVIRONMENT', 'not set')}")
 
-app = FastAPI(
-    title="Google MCP Server",
-    lifespan=lifespan,
-    middleware=[
-        Middleware(
-            CORSMiddleware,
-            allow_origins=["*"],
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
-    ]
-)
+if not os.environ.get("GOOGLE_CREDENTIALS_JSON"):
+    logger.warning("GOOGLE_CREDENTIALS_JSON env var not set - server may fail on API calls")
+if not os.environ.get("GOOGLE_TOKEN_JSON"):
+    logger.warning("GOOGLE_TOKEN_JSON env var not set - server may fail on API calls")
+
+# ---------------- APP INIT ---------------- #
+app = FastAPI(title="Google MCP Server")
 
 # Request logging middleware
 @app.middleware("http")
@@ -71,44 +51,6 @@ async def log_requests(request: Request, call_next):
     duration = time.time() - start_time
     logger.info(f"Request completed: {request.method} {request.url} - Status: {response.status_code} - Duration: {duration:.2f}s")
     return response
-
-# Check credentials at startup
-logger.info("Google MCP Server is starting up...")
-logger.info(f"Python version: {sys.version}")
-logger.info(f"Working directory: {os.getcwd()}")
-logger.info(f"Files in current directory: {os.listdir('.')}")
-logger.info(f"Environment PORT: {os.environ.get('PORT', 'not set')}")
-logger.info(f"Environment RAILWAY_ENVIRONMENT: {os.environ.get('RAILWAY_ENVIRONMENT', 'not set')}")
-
-if not os.environ.get("GOOGLE_CREDENTIALS_JSON"):
-    logger.warning("GOOGLE_CREDENTIALS_JSON env var not set - server may fail on API calls")
-if not os.environ.get("GOOGLE_TOKEN_JSON"):
-    logger.warning("GOOGLE_TOKEN_JSON env var not set - server may fail on API calls")
-
-# Signal handlers for debugging
-def handle_signal(signum, frame):
-    logger.info(f"Received signal {signum}, frame: {frame}")
-    logger.info("Signal handler called - app is being terminated")
-    global keep_alive
-    keep_alive = False
-    sys.exit(0)
-
-signal.signal(signal.SIGTERM, handle_signal)
-signal.signal(signal.SIGINT, handle_signal)
-logger.info("Signal handlers registered")
-
-# Background keep-alive thread to prevent Railway inactivity detection
-keep_alive = True
-keep_thread = None
-
-def keep_alive_thread():
-    """Background thread to keep container active and prevent Railway from killing it"""
-    global keep_alive
-    logger.info("Keep-alive thread started")
-    while keep_alive:
-        time.sleep(30)  # Log every 30 seconds
-        logger.info("Keep-alive heartbeat - container is active")
-    logger.info("Keep-alive thread stopped")
 
 
 # ---------------- REQUEST SCHEMAS ---------------- #
