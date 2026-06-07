@@ -1,14 +1,24 @@
 import logging
 import os
+import sys
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 
 # Re-create credentials.json from environment variable for Google libraries
-if os.environ.get("GOOGLE_CREDENTIALS_JSON"):
-    with open("credentials.json", "w") as f:
-        f.write(os.environ.get("GOOGLE_CREDENTIALS_JSON"))
+try:
+    google_creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    if google_creds_json:
+        logger.info("Writing credentials.json from environment variable")
+        with open("credentials.json", "w") as f:
+            f.write(google_creds_json)
+        logger.info("credentials.json written successfully")
+    else:
+        logger.warning("GOOGLE_CREDENTIALS_JSON environment variable not set")
+except Exception as e:
+    logger.error(f"Failed to write credentials.json: {e}")
+    # Don't fail startup, let individual tool calls handle missing credentials
 
 logging.basicConfig(level=logging.INFO)
 # ---------------- LOGGING SETUP ---------------- #
