@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import signal
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -32,10 +33,26 @@ app = FastAPI(title="Google MCP Server")
 
 # Check credentials at startup
 logger.info("Google MCP Server is starting up...")
+logger.info(f"Python version: {sys.version}")
+logger.info(f"Working directory: {os.getcwd()}")
+logger.info(f"Files in current directory: {os.listdir('.')}")
+logger.info(f"Environment PORT: {os.environ.get('PORT', 'not set')}")
+logger.info(f"Environment RAILWAY_ENVIRONMENT: {os.environ.get('RAILWAY_ENVIRONMENT', 'not set')}")
+
 if not os.environ.get("GOOGLE_CREDENTIALS_JSON"):
     logger.warning("GOOGLE_CREDENTIALS_JSON env var not set - server may fail on API calls")
 if not os.environ.get("GOOGLE_TOKEN_JSON"):
     logger.warning("GOOGLE_TOKEN_JSON env var not set - server may fail on API calls")
+
+# Signal handlers for debugging
+def handle_signal(signum, frame):
+    logger.info(f"Received signal {signum}, frame: {frame}")
+    logger.info("Signal handler called - app is being terminated")
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, handle_signal)
+signal.signal(signal.SIGINT, handle_signal)
+logger.info("Signal handlers registered")
 
 
 # ---------------- REQUEST SCHEMAS ---------------- #
