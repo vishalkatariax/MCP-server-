@@ -5,6 +5,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+# ---------------- LOGGING SETUP ---------------- #
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+logger = logging.getLogger(__name__)
 
 # Re-create credentials.json from environment variable for Google libraries
 try:
@@ -19,15 +26,6 @@ try:
 except Exception as e:
     logger.error(f"Failed to write credentials.json: {e}")
     # Don't fail startup, let individual tool calls handle missing credentials
-
-logging.basicConfig(level=logging.INFO)
-# ---------------- LOGGING SETUP ---------------- #
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-
-logger = logging.getLogger(__name__)
 
 # ---------------- LIFESPAN ---------------- #
 @asynccontextmanager
