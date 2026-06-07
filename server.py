@@ -27,23 +27,15 @@ except Exception as e:
     logger.error(f"Failed to write credentials.json: {e}")
     # Don't fail startup, let individual tool calls handle missing credentials
 
-# ---------------- LIFESPAN ---------------- #
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    logger.info("Google MCP Server is starting up...")
-    
-    # Check if credentials are available at startup
-    if not os.environ.get("GOOGLE_CREDENTIALS_JSON"):
-        logger.warning("GOOGLE_CREDENTIALS_JSON env var not set - server may fail on API calls")
-    if not os.environ.get("GOOGLE_TOKEN_JSON"):
-        logger.warning("GOOGLE_TOKEN_JSON env var not set - server may fail on API calls")
-    
-    yield
-    logger.info("Google MCP Server is shutting down...")
-
-
 # ---------------- APP INIT ---------------- #
-app = FastAPI(title="Google MCP Server", lifespan=lifespan)
+app = FastAPI(title="Google MCP Server")
+
+# Check credentials at startup
+logger.info("Google MCP Server is starting up...")
+if not os.environ.get("GOOGLE_CREDENTIALS_JSON"):
+    logger.warning("GOOGLE_CREDENTIALS_JSON env var not set - server may fail on API calls")
+if not os.environ.get("GOOGLE_TOKEN_JSON"):
+    logger.warning("GOOGLE_TOKEN_JSON env var not set - server may fail on API calls")
 
 
 # ---------------- REQUEST SCHEMAS ---------------- #
