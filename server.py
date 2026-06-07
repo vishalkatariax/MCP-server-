@@ -2,9 +2,12 @@ import logging
 import os
 import sys
 import signal
+import time
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
+from fastapi.middleware import Middleware
+from fastapi.middleware.cors import CORSMiddleware
 
 # ---------------- LOGGING SETUP ---------------- #
 logging.basicConfig(
@@ -29,7 +32,28 @@ except Exception as e:
     # Don't fail startup, let individual tool calls handle missing credentials
 
 # ---------------- APP INIT ---------------- #
-app = FastAPI(title="Google MCP Server")
+app = FastAPI(
+    title="Google MCP Server",
+    middleware=[
+        Middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+    ]
+)
+
+# Request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"Incoming request: {request.method} {request.url}")
+    start_time = time.time()
+    response = await call_next(request)
+    duration = time.time() - start_time
+    logger.info(f"Request completed: {request.method} {request.url} - Status: {response.status_code} - Duration: {duration:.2f}s")
+    return response
 
 # Check credentials at startup
 logger.info("Google MCP Server is starting up...")
@@ -185,5 +209,19 @@ def run_email(data: EmailInput):
 @app.get("/")
 def root():
     return {
-        "message": "Google MCP Server is running 🚀"
+        "message": "Google MCP Server is running 🚀",
+        "timestamp": time.time(),
+        "status": "healthy"
     }
+
+@app.get("/health")
+def health_check():
+    return {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "uptime": "active"
+    }
+
+@app.get("/ping")
+def ping():
+    return {"pong": True, "timestamp": time.time()}
