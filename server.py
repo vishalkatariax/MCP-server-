@@ -45,7 +45,6 @@ async def lifespan(app: FastAPI):
     yield
     # Shutdown
     logger.info("Google MCP Server lifespan shutdown")
-    global keep_alive
     keep_alive = False
     logger.info("Keep-alive thread stopped in lifespan")
 
