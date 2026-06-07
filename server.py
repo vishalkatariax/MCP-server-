@@ -2,8 +2,7 @@ import logging
 import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from docs_tool import append_to_doc
-from gmail_tool import create_email_draft
+
 
 # Re-create credentials.json from environment variable for Google libraries
 if os.environ.get("GOOGLE_CREDENTIALS_JSON"):
@@ -92,6 +91,7 @@ def list_tools():
 @app.post("/append_to_doc")
 def run_append(data: AppendDocInput):
     try:
+        from docs_tool import append_to_doc
         logger.info("Received request for append_to_doc")
 
         if not approve("append_to_doc", data.dict()):
@@ -121,6 +121,7 @@ def run_append(data: AppendDocInput):
 @app.post("/create_email_draft")
 def run_email(data: EmailInput):
     try:
+        from gmail_tool import create_email_draft
         logger.info("Received request for create_email_draft")
 
         if not approve("create_email_draft", data.dict()):
