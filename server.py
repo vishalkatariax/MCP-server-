@@ -199,3 +199,26 @@ def health_check():
 @app.get("/ping")
 def ping():
     return {"pong": True, "timestamp": time.time()}
+
+@app.get("/readiness")
+def readiness_check():
+    """Check if the server is ready to handle requests"""
+    try:
+        # Check if credentials are available
+        creds_available = bool(
+            os.environ.get("GOOGLE_CREDENTIALS_JSON") and 
+            os.environ.get("GOOGLE_TOKEN_JSON")
+        )
+        
+        return {
+            "status": "ready" if creds_available else "degraded",
+            "timestamp": time.time(),
+            "credentials_loaded": creds_available
+        }
+    except Exception as e:
+        logger.error(f"Readiness check failed: {e}")
+        return {
+            "status": "not_ready",
+            "timestamp": time.time(),
+            "error": str(e)
+        }
